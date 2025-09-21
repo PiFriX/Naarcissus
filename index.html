@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Narcissus</title>
-    <!-- 引入富文本编辑器（支持长文编辑） -->
+    <!-- 引入富文本编辑器 -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <!-- 新增：引入MD解析库marked.js -->
+    <!-- 引入MD解析库 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
@@ -57,6 +57,9 @@
             padding: 12px 24px;
             border-bottom: 1px solid var(--border);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .title {
@@ -142,7 +145,7 @@
             transform: translateX(20px);
         }
 
-        /* 内容区域 */
+        /* 内容区域通用样式 */
         .content {
             max-width: 800px;
             margin: 20px auto;
@@ -510,7 +513,7 @@
             background-color: rgba(0, 112, 243, 0.1);
         }
 
-        /* 编辑页面（长文编辑，参考移动端样式） */
+        /* 编辑页面（长文编辑） */
         .edit-page {
             display: none;
             height: 100vh;
@@ -606,8 +609,52 @@
             font-size: 24px;
         }
 
-        /* 初始隐藏档案内容 */
-        #archiveContent {
+        /* 文章详情页样式 */
+        #articleDetailPage {
+            display: none;
+        }
+
+        .article-detail {
+            padding: 20px 0;
+        }
+
+        .article-detail h1 {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .content-html {
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .content-html h2 {
+            margin: 24px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .content-html ul, .content-html ol {
+            padding-left: 24px;
+            margin: 12px 0;
+        }
+
+        .content-html img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+
+        /* 初始隐藏页面 */
+        #archiveContent, #articleDetailPage, .edit-page, .create-form {
             display: none;
         }
     </style>
@@ -635,9 +682,9 @@
         <p>这是主页面内容，点击上方「档案」可查看分类内容。</p>
     </div>
 
-    <!-- 档案内容（整合优化） -->
+    <!-- 档案内容 -->
     <div class="content" id="archiveContent">
-        <!-- 新增：排序+类目标题容器 -->
+        <!-- 排序+类目标题容器 -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="margin: 0; font-size: 18px;">文章分类</h2>
             <div class="sort-control">
@@ -676,13 +723,13 @@
         <!-- 标签栏 -->
         <div class="tags" id="tagsContainer"></div>
 
-        <!-- 新增：分页组件 -->
+        <!-- 分页组件 -->
         <div class="pagination" id="pagination"></div>
 
         <!-- 操作按钮（创建新文章） -->
         <button class="btn btn-primary" id="createBtn">创建新文章</button>
 
-        <!-- 创建文章表单（新增MD上传功能） -->
+        <!-- 创建文章表单（含MD上传） -->
         <div class="create-form" id="createForm">
             <div class="form-group">
                 <label for="articleTitle">文章标题</label>
@@ -697,10 +744,10 @@
                 <textarea id="articleDesc" placeholder="输入文章摘要（上传MD可自动提取前100字）"></textarea>
             </div>
             <div class="form-group">
-                <label for="articleImg">图片URL（可选，推荐使用https://picsum.photos/200/150?random=数字）</label>
+                <label for="articleImg">图片URL（可选）</label>
                 <input type="text" id="articleImg" placeholder="输入图片链接">
             </div>
-            <!-- 新增：MD文件上传控件 -->
+            <!-- MD文件上传控件 -->
             <div class="form-group md-upload-group">
                 <label>上传MD文档</label>
                 <input type="file" id="mdFileInput" accept=".md">
@@ -739,28 +786,42 @@
                 <div class="article-list" id="artList"></div>
             </div>
         </div>
+    </div>
 
-        <!-- 编辑页面（长文编辑，参考移动端样式） -->
-        <div class="edit-page" id="editPage">
-            <div class="navbar">
-                <button class="btn" id="backToListBtn">返回</button>
-                <button class="btn btn-primary" id="saveEditBtn">保存</button>
-                <button class="btn" id="nextStepBtn" style="opacity: 0.7; cursor: not-allowed;">下一步</button>
+    <!-- 文章详情页 -->
+    <div class="content" id="articleDetailPage">
+        <div class="article-detail">
+            <h1 id="detailTitle">文章标题</h1>
+            <div class="meta">
+                <span id="detailDate">2025-01-01</span>
+                <span id="detailCategory">分类</span>
+                <span id="detailReadTime">5分钟阅读</span>
             </div>
-            <div class="edit-content">
-                <input type="text" id="editTitle" placeholder="输入标题">
-                <div id="editor-container"></div>
-            </div>
-            <div class="edit-toolbar">
-                <button class="tool-btn" id="imgToolBtn">📷</button>
-                <button class="tool-btn" id="formatToolBtn">A♯</button>
-                <button class="tool-btn" id="moreToolBtn">⋯</button>
-                <!-- 新增：编辑页MD上传按钮 -->
-                <label class="tool-btn" style="cursor: pointer;" title="上传MD替换内容">📄</label>
-                <input type="file" id="editMdFileInput" accept=".md" style="display: none;">
-            </div>
-            <input type="hidden" id="editArticleId">
+            <div id="detailContent" class="content-html"></div>
+            <button class="btn btn-primary" id="editArticleBtn">编辑文章</button>
         </div>
+    </div>
+
+    <!-- 编辑页面 -->
+    <div class="edit-page" id="editPage">
+        <div class="navbar">
+            <button class="btn" id="backToDetailBtn">返回详情</button>
+            <button class="btn btn-primary" id="saveEditBtn">保存</button>
+            <button class="btn" id="nextStepBtn" style="opacity: 0.7; cursor: not-allowed;">下一步</button>
+        </div>
+        <div class="edit-content">
+            <input type="text" id="editTitle" placeholder="输入标题">
+            <div id="editor-container"></div>
+        </div>
+        <div class="edit-toolbar">
+            <button class="tool-btn" id="imgToolBtn">📷</button>
+            <button class="tool-btn" id="formatToolBtn">A♯</button>
+            <button class="tool-btn" id="moreToolBtn">⋯</button>
+            <!-- 编辑页MD上传按钮 -->
+            <label class="tool-btn" style="cursor: pointer;" title="上传MD替换内容">📄</label>
+            <input type="file" id="editMdFileInput" accept=".md" style="display: none;">
+        </div>
+        <input type="hidden" id="editArticleId">
     </div>
 
     <script>
@@ -811,15 +872,15 @@
             mainContent.style.display = 'none';
             archiveContent.style.display = 'block';
             initArticleRender(); // 初始化筛选渲染
+            window.location.hash = ''; // 重置路由
         });
         homeLink.addEventListener('click', () => {
             archiveContent.style.display = 'none';
             mainContent.style.display = 'block';
-            hideEditPage();
-            hideCreateForm();
+            hideAllPages();
         });
 
-        // 3. 类目-标签映射表（带关键词筛选）
+        // 3. 类目-标签映射表
         const categoryTagsMap = {
             programming: [
                 { name: '全部', active: true, keywords: [] },
@@ -904,8 +965,7 @@
                 renderTags(categoryId);
                 renderArticleListWithFilter();
                 renderPagination();
-                hideEditPage();
-                hideCreateForm();
+                hideAllPages();
             });
         });
 
@@ -1005,6 +1065,11 @@
             return articles.filter(a => a.category === categoryId);
         }
 
+        function getArticleById(id) {
+            const articles = getArticles();
+            return articles.find(a => a.id === id);
+        }
+
         // 8. 带筛选/排序/分页的文章列表渲染
         function renderArticleListWithFilter() {
             const { categoryId, tagKeywords, sortType, page, pageSize } = currentFilter;
@@ -1076,7 +1141,7 @@
                         <img src="${article.img || 'https://picsum.photos/200/150?random=0'}" alt="${article.title}" class="article-img">
                     `;
                     articleElement.addEventListener('click', () => {
-                        showEditPage(article);
+                        window.location.hash = `#/article/${article.id}`;
                     });
                     listContainer.appendChild(articleElement);
                 });
@@ -1132,12 +1197,12 @@
             renderArticleListWithFilter();
         }
 
-        // 9. 创建文章功能（新增MD上传解析逻辑）
+        // 9. 创建文章功能（含MD上传解析）
         const createBtn = document.getElementById('createBtn');
         const createForm = document.getElementById('createForm');
         const saveCreateBtn = document.getElementById('saveCreateBtn');
         const cancelCreateBtn = document.getElementById('cancelCreateBtn');
-        // 新增：MD上传相关DOM
+        // MD上传相关DOM
         const mdFileInput = document.getElementById('mdFileInput');
         const mdUploadBtn = document.getElementById('mdUploadBtn');
         const mdFileName = document.getElementById('mdFileName');
@@ -1222,19 +1287,98 @@
             currentFilter.page = 1;
             renderArticleListWithFilter();
             switchToCategory(category);
-            alert('文章创建成功，可点击文章进入编辑长文内容！');
+            alert('文章创建成功，可点击文章进入详情页！');
         });
 
-        // 10. 编辑文章功能（新增编辑页MD上传）
+        // 10. 文章详情页逻辑
+        function showArticleDetail(articleId) {
+            const article = getArticleById(articleId);
+            if (!article) {
+                alert('文章不存在');
+                window.location.hash = '';
+                return;
+            }
+            // 隐藏其他页面
+            mainContent.style.display = 'none';
+            archiveContent.style.display = 'none';
+            editPage.style.display = 'none';
+            createForm.style.display = 'none';
+            // 显示详情页
+            const detailPage = document.getElementById('articleDetailPage');
+            detailPage.style.display = 'block';
+            // 填充内容
+            document.getElementById('detailTitle').textContent = article.title;
+            document.getElementById('detailDate').textContent = article.date;
+            document.getElementById('detailCategory').textContent = article.category;
+            document.getElementById('detailReadTime').textContent = `${Math.ceil(article.content.length / 500)}分钟阅读`;
+            document.getElementById('detailContent').innerHTML = article.content;
+            // 编辑按钮事件
+            document.getElementById('editArticleBtn').addEventListener('click', () => {
+                localStorage.setItem('editArticleId', articleId);
+                window.location.hash = '#/edit';
+            });
+        }
+
+        // 11. 编辑页逻辑
         const editPage = document.getElementById('editPage');
-        const backToListBtn = document.getElementById('backToListBtn');
+        const backToDetailBtn = document.getElementById('backToDetailBtn');
         const saveEditBtn = document.getElementById('saveEditBtn');
         const nextStepBtn = document.getElementById('nextStepBtn');
         const editTitle = document.getElementById('editTitle');
         const editArticleId = document.getElementById('editArticleId');
-        // 新增：编辑页MD上传控件
+        // 编辑页MD上传控件
         const editMdFileInput = document.getElementById('editMdFileInput');
         const editMdUploadBtn = document.querySelector('.edit-toolbar .tool-btn[title="上传MD替换内容"]');
+
+        function showEditPage(article) {
+            editTitle.value = article.title || '';
+            editArticleId.value = article.id || '';
+            quill.root.innerHTML = article.content || '<p>想说点什么...</p>';
+
+            // 隐藏其他页面，显示编辑页
+            mainContent.style.display = 'none';
+            archiveContent.style.display = 'none';
+            articleDetailPage.style.display = 'none';
+            createForm.style.display = 'none';
+            editPage.style.display = 'flex';
+
+            // 控制“下一步”按钮状态
+            nextStepBtn.style.opacity = article.content && article.content.trim() !== '<p>想说点什么...</p>' ? '1' : '0.7';
+            nextStepBtn.style.cursor = article.content && article.content.trim() !== '<p>想说点什么...</p>' ? 'pointer' : 'not-allowed';
+        }
+
+        backToDetailBtn.addEventListener('click', () => {
+            window.location.hash = `#/article/${editArticleId.value}`;
+        });
+
+        saveEditBtn.addEventListener('click', () => {
+            const id = editArticleId.value;
+            const title = editTitle.value.trim();
+            const content = quill.root.innerHTML;
+
+            if (!id || !title) {
+                alert('标题不能为空！');
+                return;
+            }
+
+            const articles = getArticles();
+            const articleIndex = articles.findIndex(a => a.id === id);
+            if (articleIndex === -1) return;
+
+            articles[articleIndex].title = title;
+            articles[articleIndex].content = content;
+
+            localStorage.setItem(ARTICLE_KEY, JSON.stringify(articles));
+            window.location.hash = `#/article/${id}`;
+            alert('文章修改已保存！');
+        });
+
+        // 下一步按钮逻辑（示例）
+        nextStepBtn.addEventListener('click', () => {
+            if (nextStepBtn.style.opacity === '1') {
+                alert('“下一步”可扩展为发布、预览等逻辑');
+            }
+        });
 
         // 编辑页MD上传触发
         editMdUploadBtn.addEventListener('click', () => {
@@ -1267,60 +1411,7 @@
             reader.readAsText(file);
         });
 
-        function showEditPage(article) {
-            editTitle.value = article.title || '';
-            editArticleId.value = article.id || '';
-            quill.root.innerHTML = article.content || '<p>想说点什么...</p>';
-
-            // 隐藏其他页面，显示编辑页
-            pages.forEach(page => page.classList.remove('active'));
-            createForm.classList.remove('active');
-            editPage.classList.add('active');
-
-            // 控制“下一步”按钮状态
-            nextStepBtn.style.opacity = article.content && article.content.trim() !== '<p>想说点什么...</p>' ? '1' : '0.7';
-            nextStepBtn.style.cursor = article.content && article.content.trim() !== '<p>想说点什么...</p>' ? 'pointer' : 'not-allowed';
-        }
-
-        function hideEditPage() {
-            editPage.classList.remove('active');
-            const activeCategoryId = currentFilter.categoryId;
-            document.getElementById(`${activeCategoryId}Page`).classList.add('active');
-        }
-
-        backToListBtn.addEventListener('click', hideEditPage);
-
-        saveEditBtn.addEventListener('click', () => {
-            const id = editArticleId.value;
-            const title = editTitle.value.trim();
-            const content = quill.root.innerHTML;
-
-            if (!id || !title) {
-                alert('标题不能为空！');
-                return;
-            }
-
-            const articles = getArticles();
-            const articleIndex = articles.findIndex(a => a.id === id);
-            if (articleIndex === -1) return;
-
-            articles[articleIndex].title = title;
-            articles[articleIndex].content = content;
-
-            localStorage.setItem(ARTICLE_KEY, JSON.stringify(articles));
-            renderArticleListWithFilter();
-            hideEditPage();
-            alert('文章修改已保存！');
-        });
-
-        // 下一步按钮逻辑（示例）
-        nextStepBtn.addEventListener('click', () => {
-            if (nextStepBtn.style.opacity === '1') {
-                alert('“下一步”可扩展为发布、预览等逻辑');
-            }
-        });
-
-        // 底部工具按钮逻辑（示例：图片插入）
+        // 底部工具按钮逻辑（图片插入）
         document.getElementById('imgToolBtn').addEventListener('click', () => {
             const imgUrl = prompt('请输入图片URL：', 'https://picsum.photos/400/300?random=' + Math.floor(Math.random() * 100));
             if (imgUrl) {
@@ -1348,8 +1439,39 @@
             renderArticleListWithFilter();
         }
 
-        // 页面加载初始化
+        function hideAllPages() {
+            articleDetailPage.style.display = 'none';
+            editPage.style.display = 'none';
+            createForm.style.display = 'none';
+        }
+
+        // 路由处理
+        function handleRoute() {
+            const hash = window.location.hash;
+            if (hash.startsWith('#/article/')) {
+                const articleId = hash.split('/')[2];
+                showArticleDetail(articleId);
+            } else if (hash === '#/edit') {
+                const articleId = localStorage.getItem('editArticleId');
+                if (articleId) {
+                    showEditPage(getArticleById(articleId));
+                } else {
+                    window.location.hash = '';
+                }
+            } else {
+                // 显示档案页或主页
+                if (archiveContent.style.display === 'none') {
+                    mainContent.style.display = 'block';
+                } else {
+                    initArticleRender();
+                }
+            }
+        }
+
+        // 初始化路由监听
+        window.addEventListener('hashchange', handleRoute);
         window.addEventListener('load', () => {
+            handleRoute();
             initDefaultArticles();
             // 同步富文本编辑器初始样式
             document.querySelector('.ql-toolbar').style.backgroundColor = getComputedStyle(body).getPropertyValue('--category-bg');
