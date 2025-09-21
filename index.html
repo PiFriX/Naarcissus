@@ -2,25 +2,41 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Narcissus 导航栏</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narcissus</title>
+    <!-- 引入富文本编辑器（支持长文编辑） -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <!-- 新增：引入MD解析库marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* 颜色变量：白天/暗黑模式统一管理 */
         :root {
-            --bg: #ffffff;         /* 背景色 */
-            --text: #333333;       /* 文字色 */
+            --bg: #ffffff;         /* 白天背景 */
+            --text: #333333;       /* 白天文字主色 */
             --border: #eeeeee;     /* 边框色 */
-            --switch-bg: #f0f0f0;  /* 开关背景（白天） */
-            --switch-circle: #fff; /* 开关滑块（白天） */
-            --switch-active: #007bff; /* 开关激活色（白天） */
+            --switch-bg: #f0f0f0;  /* 主题开关背景（白天） */
+            --switch-circle: #fff; /* 主题开关滑块（白天） */
+            --switch-active: #007bff; /* 主题开关激活色（白天） */
+            --category-bg: #f9f9f9; /* 类目卡片背景（白天） */
+            --category-text: #666; /* 类目描述文字色（白天） */
+            --tag-active-color: #0070f3; /* 选中标签颜色（白天） */
+            --category-active-bg: #f0f5ff; /* 选中类目卡片背景（白天） */
+            --btn-bg: #f5f5f5;     /* 按钮背景（白天） */
+            --btn-hover: #eee;     /* 按钮hover（白天） */
         }
 
         body.dark-mode {
             --bg: #1e1e1e;         /* 暗黑背景 */
-            --text: #e0e0e0;       /* 暗黑文字 */
-            --border: #333333;     /* 暗黑边框 */
-            --switch-bg: #333333;  /* 开关背景（暗黑） */
-            --switch-circle: #fff; /* 开关滑块（暗黑） */
-            --switch-active: #66b3ff; /* 开关激活色（暗黑） */
+            --text: #e0e0e0;       /* 暗黑文字主色 */
+            --border: #333333;     /* 暗黑边框色 */
+            --switch-bg: #333333;  /* 主题开关背景（暗黑） */
+            --switch-active: #66b3ff; /* 主题开关激活色（暗黑） */
+            --category-bg: #2a2a2a; /* 类目卡片背景（暗黑） */
+            --category-text: #ccc; /* 类目描述文字色（暗黑） */
+            --tag-active-color: #66b3ff; /* 选中标签颜色（暗黑） */
+            --category-active-bg: #2c3e50; /* 选中类目卡片背景（暗黑） */
+            --btn-bg: #333;        /* 按钮背景（暗黑） */
+            --btn-hover: #444;     /* 按钮hover（暗黑） */
         }
 
         body {
@@ -29,9 +45,10 @@
             background-color: var(--bg);
             color: var(--text);
             transition: background-color 0.3s, color 0.3s;
+            padding: 0;
         }
 
-        /* 导航栏容器 */
+        /* 导航栏样式 */
         .navbar {
             display: flex;
             justify-content: space-between;
@@ -42,35 +59,39 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        /* 左侧标题 */
         .title {
             font-size: 20px;
             font-weight: 600;
             text-decoration: none;
             color: var(--text);
+            cursor: pointer;
+            transition: color 0.2s;
         }
 
-        /* 右侧区域：导航链接 + 模式切换 */
+        .title:hover {
+            color: #666;
+        }
+
         .navbar-right {
             display: flex;
             align-items: center;
-            gap: 16px; /* 元素间距 */
+            gap: 16px;
         }
 
-        /* 导航链接通用样式 */
         .nav-link {
             margin-left: 20px;
             text-decoration: none;
             color: var(--text);
             font-size: 14px;
             transition: color 0.2s;
+            cursor: pointer;
         }
 
         .nav-link:hover {
             color: #666;
         }
 
-        /* 模式切换：自定义开关样式 */
+        /* 主题切换开关 */
         .theme-switch {
             display: flex;
             align-items: center;
@@ -120,18 +141,485 @@
         input:checked + .slider:before {
             transform: translateX(20px);
         }
+
+        /* 内容区域 */
+        .content {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 24px;
+        }
+
+        /* 类目容器（横向滚动） */
+        .categories {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        /* 类目卡片 */
+        .category {
+            min-width: 220px;
+            padding: 12px;
+            background-color: var(--category-bg);
+            border-radius: 8px;
+            box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .category.active {
+            background-color: var(--category-active-bg);
+        }
+
+        .category h2 {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0 0 6px;
+            color: var(--text);
+        }
+
+        .category p {
+            font-size: 12px;
+            color: var(--category-text);
+            line-height: 1.5;
+            margin: 0;
+            text-indent: 2em;
+        }
+
+        /* 标签栏（横向滚动） */
+        .tags {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 8px;
+            scrollbar-width: thin;
+        }
+
+        .tags::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .tags::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 2px;
+        }
+
+        .tag {
+            padding: 4px 8px;
+            cursor: pointer;
+            color: var(--text);
+            transition: color 0.2s, border-bottom-color 0.2s;
+            border-bottom: 2px solid transparent;
+            font-size: 12px;
+        }
+
+        .tag.active {
+            color: var(--tag-active-color);
+            border-bottom-color: var(--tag-active-color);
+            font-weight: 500;
+        }
+
+        .tag:hover {
+            color: var(--tag-active-color);
+        }
+
+        /* 按钮样式（创建/保存/返回） */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--btn-bg);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+            margin: 10px 0;
+        }
+
+        .btn:hover {
+            background-color: var(--btn-hover);
+        }
+
+        .btn-primary {
+            background-color: var(--tag-active-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0060d0;
+        }
+
+        /* 类目子页容器 */
+        .page-container {
+            margin-top: 20px;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* 文章列表（优化后） */
+        .article {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .article:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .article-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .article-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text);
+            transition: color 0.2s;
+        }
+
+        .article:hover .article-title {
+            color: var(--tag-active-color);
+        }
+
+        /* 新增：文章标签显示 */
+        .article-tags {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .article-tag {
+            font-size: 11px;
+            padding: 2px 6px;
+            background-color: rgba(0, 112, 243, 0.1);
+            color: var(--tag-active-color);
+            border-radius: 4px;
+        }
+
+        .article-desc {
+            font-size: 12px;
+            color: var(--category-text);
+            line-height: 1.6;
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 11px;
+            color: #999;
+            margin-top: auto;
+        }
+
+        /* 新增：阅读时长占位 */
+        .article-readtime {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .article-img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            transition: transform 0.3s ease;
+        }
+
+        .article:hover .article-img {
+            transform: scale(1.03);
+        }
+
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--category-text);
+            font-size: 14px;
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--tag-active-color);
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 空状态优化 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 0;
+            color: var(--category-text);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--border);
+        }
+
+        .empty-state p {
+            margin: 0 0 20px;
+            font-size: 14px;
+        }
+
+        /* 分页按钮样式 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 20px 0;
+            padding: 10px 0;
+        }
+
+        .pagination-btn {
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(.disabled):not(.active) {
+            border-color: var(--tag-active-color);
+            color: var(--tag-active-color);
+        }
+
+        .pagination-btn.active {
+            background-color: var(--tag-active-color);
+            color: #fff;
+            border-color: var(--tag-active-color);
+        }
+
+        .pagination-btn.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* 排序控件样式 */
+        .sort-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 创建文章表单 */
+        .create-form {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: var(--category-bg);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .create-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background-color: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* 新增：MD上传按钮样式 */
+        .md-upload-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #mdFileInput {
+            display: none;
+        }
+
+        .md-upload-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--tag-active-color);
+            color: var(--tag-active-color);
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .md-upload-btn:hover {
+            background-color: rgba(0, 112, 243, 0.1);
+        }
+
+        /* 编辑页面（长文编辑，参考移动端样式） */
+        .edit-page {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+            background-color: var(--bg);
+        }
+
+        .edit-page.active {
+            display: flex;
+        }
+
+        .edit-page .navbar {
+            padding: 10px 16px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .edit-page .btn {
+            padding: 6px 12px;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .edit-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .edit-content #editTitle {
+            width: 100%;
+            padding: 8px;
+            font-size: 18px;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            background-color: transparent;
+            color: var(--text);
+            margin-bottom: 16px;
+        }
+
+        /* 富文本编辑器容器（编辑页专用） */
+        .edit-content #editor-container {
+            height: calc(100vh - 160px);
+            border: none;
+            background-color: transparent;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* 调整Quill工具栏样式为紧凑版 */
+        .ql-toolbar {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 8px !important;
+            gap: 8px !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        .ql-toolbar .ql-formats {
+            margin: 0 !important;
+        }
+
+        .ql-toolbar button, .ql-toolbar select {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-toolbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background-color: var(--category-bg);
+            border-top: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .tool-btn {
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        /* 初始隐藏档案内容 */
+        #archiveContent {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <!-- 导航栏 -->
     <div class="navbar">
-        <a href="#" class="title">Narcissus</a>
+        <div class="title" id="homeLink">Narcissus</div>
         <div class="navbar-right">
-            <!-- 原有导航链接 -->
-            <a href="#" class="nav-link">档案</a>
-            <a href="#" class="nav-link">搜索</a>
-            <a href="#" class="nav-link">标签</a>
-            
-            <!-- 暗黑/白天模式切换（自定义开关） -->
+            <div class="nav-link" id="archiveLink">档案</div>
+            <div class="nav-link">搜索</div>
+            <div class="nav-link">标签</div>
             <div class="theme-switch">
                 <label class="switch">
                     <input type="checkbox" id="themeToggle">
@@ -141,13 +629,731 @@
         </div>
     </div>
 
+    <!-- 主页内容 -->
+    <div class="content" id="mainContent">
+        <h1>欢迎来到 Narcissus</h1>
+        <p>这是主页面内容，点击上方「档案」可查看分类内容。</p>
+    </div>
+
+    <!-- 档案内容（整合优化） -->
+    <div class="content" id="archiveContent">
+        <!-- 新增：排序+类目标题容器 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 18px;">文章分类</h2>
+            <div class="sort-control">
+                <span style="font-size: 12px; color: var(--category-text);">排序：</span>
+                <select id="sortSelect">
+                    <option value="newest">最新发布</option>
+                    <option value="oldest">最早发布</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 类目卡片区域 -->
+        <div class="categories" id="categories">
+            <div class="category active" data-page="programming">
+                <h2>编程</h2>
+                <p>主要围绕Obsidian工具与编程入门内容的分享。</p>
+            </div>
+            <div class="category" data-page="jewelry">
+                <h2>珠宝</h2>
+                <p>珠宝设计理念、材质工艺与历史文化的分享。</p>
+            </div>
+            <div class="category" data-page="design">
+                <h2>设计</h2>
+                <p>UI/UX设计理念与软件操作，色彩排版知识。</p>
+            </div>
+            <div class="category" data-page="reading">
+                <h2>阅读</h2>
+                <p>优质书籍推荐与高效阅读法，知识管理积累。</p>
+            </div>
+            <div class="category" data-page="art">
+                <h2>艺术</h2>
+                <p>绘画、摄影、音乐创作心得与作品赏析。</p>
+            </div>
+        </div>
+
+        <!-- 标签栏 -->
+        <div class="tags" id="tagsContainer"></div>
+
+        <!-- 新增：分页组件 -->
+        <div class="pagination" id="pagination"></div>
+
+        <!-- 操作按钮（创建新文章） -->
+        <button class="btn btn-primary" id="createBtn">创建新文章</button>
+
+        <!-- 创建文章表单（新增MD上传功能） -->
+        <div class="create-form" id="createForm">
+            <div class="form-group">
+                <label for="articleTitle">文章标题</label>
+                <input type="text" id="articleTitle" placeholder="输入文章标题（上传MD可自动提取）">
+            </div>
+            <div class="form-group">
+                <label for="articleDate">发布日期</label>
+                <input type="date" id="articleDate">
+            </div>
+            <div class="form-group">
+                <label for="articleDesc">文章摘要</label>
+                <textarea id="articleDesc" placeholder="输入文章摘要（上传MD可自动提取前100字）"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="articleImg">图片URL（可选，推荐使用https://picsum.photos/200/150?random=数字）</label>
+                <input type="text" id="articleImg" placeholder="输入图片链接">
+            </div>
+            <!-- 新增：MD文件上传控件 -->
+            <div class="form-group md-upload-group">
+                <label>上传MD文档</label>
+                <input type="file" id="mdFileInput" accept=".md">
+                <button class="md-upload-btn" id="mdUploadBtn">选择MD文件</button>
+                <span id="mdFileName" style="font-size: 12px; color: var(--category-text);"></span>
+            </div>
+            <div class="form-group">
+                <label for="articleCategory">所属类目</label>
+                <select id="articleCategory">
+                    <option value="programming">编程</option>
+                    <option value="jewelry" selected>珠宝</option>
+                    <option value="design">设计</option>
+                    <option value="reading">阅读</option>
+                    <option value="art">艺术</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="saveCreateBtn">保存文章</button>
+            <button class="btn" id="cancelCreateBtn">取消</button>
+        </div>
+
+        <!-- 类目子页容器 -->
+        <div class="page-container" id="pageContainer">
+            <div class="page active" id="programmingPage">
+                <div class="article-list" id="programmingList"></div>
+            </div>
+            <div class="page" id="jewelryPage">
+                <div class="article-list" id="jewelryList"></div>
+            </div>
+            <div class="page" id="designPage">
+                <div class="article-list" id="designList"></div>
+            </div>
+            <div class="page" id="readingPage">
+                <div class="article-list" id="readingList"></div>
+            </div>
+            <div class="page" id="artPage">
+                <div class="article-list" id="artList"></div>
+            </div>
+        </div>
+
+        <!-- 编辑页面（长文编辑，参考移动端样式） -->
+        <div class="edit-page" id="editPage">
+            <div class="navbar">
+                <button class="btn" id="backToListBtn">返回</button>
+                <button class="btn btn-primary" id="saveEditBtn">保存</button>
+                <button class="btn" id="nextStepBtn" style="opacity: 0.7; cursor: not-allowed;">下一步</button>
+            </div>
+            <div class="edit-content">
+                <input type="text" id="editTitle" placeholder="输入标题">
+                <div id="editor-container"></div>
+            </div>
+            <div class="edit-toolbar">
+                <button class="tool-btn" id="imgToolBtn">📷</button>
+                <button class="tool-btn" id="formatToolBtn">A♯</button>
+                <button class="tool-btn" id="moreToolBtn">⋯</button>
+                <!-- 新增：编辑页MD上传按钮 -->
+                <label class="tool-btn" style="cursor: pointer;" title="上传MD替换内容">📄</label>
+                <input type="file" id="editMdFileInput" accept=".md" style="display: none;">
+            </div>
+            <input type="hidden" id="editArticleId">
+        </div>
+    </div>
+
     <script>
-        // 暗黑/白天模式切换逻辑
+        // 初始化富文本编辑器
+        const quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{ 'indent': '-1' }, { 'indent': '+1' }],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            },
+            placeholder: '想说点什么...（支持富文本格式，可编辑长文）'
+        });
+
+        // 全局筛选/排序/分页状态
+        let currentFilter = {
+            categoryId: 'programming',
+            tag: '全部',
+            tagKeywords: [],
+            sortType: 'newest',
+            page: 1,
+            pageSize: 5,
+            totalPages: 0
+        };
+
+        // 1. 主题切换逻辑
         const themeToggle = document.getElementById('themeToggle');
         const body = document.body;
-
         themeToggle.addEventListener('change', () => {
             body.classList.toggle('dark-mode');
+            // 同步富文本编辑器样式
+            document.querySelector('.ql-toolbar').style.backgroundColor = getComputedStyle(body).getPropertyValue('--category-bg');
+            document.querySelector('.ql-container').style.backgroundColor = getComputedStyle(body).getPropertyValue('--bg');
+        });
+
+        // 2. 页面切换逻辑（主页 ↔ 档案）
+        const homeLink = document.getElementById('homeLink');
+        const archiveLink = document.getElementById('archiveLink');
+        const mainContent = document.getElementById('mainContent');
+        const archiveContent = document.getElementById('archiveContent');
+        archiveLink.addEventListener('click', () => {
+            mainContent.style.display = 'none';
+            archiveContent.style.display = 'block';
+            initArticleRender(); // 初始化筛选渲染
+        });
+        homeLink.addEventListener('click', () => {
+            archiveContent.style.display = 'none';
+            mainContent.style.display = 'block';
+            hideEditPage();
+            hideCreateForm();
+        });
+
+        // 3. 类目-标签映射表（带关键词筛选）
+        const categoryTagsMap = {
+            programming: [
+                { name: '全部', active: true, keywords: [] },
+                { name: 'JavaScript', active: false, keywords: ['JS', 'JavaScript', '脚本'] },
+                { name: 'Vue', active: false, keywords: ['Vue', 'Vue3', 'Vue2'] },
+                { name: 'React', active: false, keywords: ['React', 'React Hook'] },
+                { name: 'Obsidian', active: false, keywords: ['Obsidian', '黑曜石'] },
+                { name: '算法', active: false, keywords: ['算法', '排序', '查找'] }
+            ],
+            jewelry: [
+                { name: '全部', active: true, keywords: [] },
+                { name: '钻石', active: false, keywords: ['钻石', '4C', '克拉'] },
+                { name: '古法金', active: false, keywords: ['古法金', '黄金', '足金'] },
+                { name: '珠宝设计', active: false, keywords: ['设计', '图纸', '款式'] },
+                { name: '3D建模', active: false, keywords: ['3D', '建模', 'CAD'] },
+                { name: '材质', active: false, keywords: ['材质', '铂金', 'K金'] },
+                { name: '碧玺', active: false, keywords: ['碧玺', '卢比来', '电气石'] }
+            ],
+            design: [
+                { name: '全部', active: true, keywords: [] },
+                { name: 'Figma', active: false, keywords: ['Figma', '设计工具'] },
+                { name: 'UI', active: false, keywords: ['UI', '界面', '视觉'] },
+                { name: 'UX', active: false, keywords: ['UX', '体验', '交互'] },
+                { name: '组件库', active: false, keywords: ['组件库', '组件', '复用'] },
+                { name: '排版', active: false, keywords: ['排版', '字体', '布局'] }
+            ],
+            reading: [
+                { name: '全部', active: true, keywords: [] },
+                { name: '编程书籍', active: false, keywords: ['编程', '代码', '开发'] },
+                { name: '知识管理', active: false, keywords: ['知识', '管理', '笔记'] },
+                { name: '读书笔记', active: false, keywords: ['笔记', '读后感', '摘抄'] },
+                { name: '高效阅读', active: false, keywords: ['高效', '速读', '方法'] }
+            ],
+            art: [
+                { name: '全部', active: true, keywords: [] },
+                { name: '绘画', active: false, keywords: ['绘画', '素描', '色彩'] },
+                { name: '摄影', active: false, keywords: ['摄影', '构图', '光影'] },
+                { name: '音乐', active: false, keywords: ['音乐', '作曲', '乐器'] },
+                { name: '印象派', active: false, keywords: ['印象派', '莫奈', '梵高'] }
+            ]
+        };
+
+        // 4. 渲染标签栏
+        const tagsContainer = document.getElementById('tagsContainer');
+        function renderTags(categoryId) {
+            tagsContainer.innerHTML = '';
+            const tags = categoryTagsMap[categoryId] || [];
+            tags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.className = `tag${tag.active ? ' active' : ''}`;
+                tagElement.textContent = tag.name;
+                tagElement.addEventListener('click', () => {
+                    tags.forEach(t => t.active = false);
+                    tag.active = true;
+                    currentFilter.tag = tag.name;
+                    currentFilter.tagKeywords = tag.keywords;
+                    currentFilter.page = 1;
+                    renderTags(categoryId);
+                    renderArticleListWithFilter();
+                    renderPagination();
+                });
+                tagsContainer.appendChild(tagElement);
+            });
+        }
+
+        // 5. 类目切换逻辑
+        const categories = document.querySelectorAll('.category');
+        const pages = document.querySelectorAll('.page');
+        categories.forEach(category => {
+            category.addEventListener('click', () => {
+                categories.forEach(c => c.classList.remove('active'));
+                category.classList.add('active');
+                const categoryId = category.getAttribute('data-page');
+                currentFilter.categoryId = categoryId;
+                currentFilter.tag = '全部';
+                currentFilter.tagKeywords = [];
+                currentFilter.page = 1;
+                pages.forEach(page => {
+                    page.classList.remove('active');
+                    document.getElementById(`${categoryId}Page`).classList.add('active');
+                });
+                renderTags(categoryId);
+                renderArticleListWithFilter();
+                renderPagination();
+                hideEditPage();
+                hideCreateForm();
+            });
+        });
+
+        // 6. 排序事件监听
+        document.getElementById('sortSelect').addEventListener('change', (e) => {
+            currentFilter.sortType = e.target.value;
+            currentFilter.page = 1;
+            renderArticleListWithFilter();
+            renderPagination();
+        });
+
+        // 7. 文章数据管理（localStorage）
+        const ARTICLE_KEY = 'narcissus_articles';
+
+        function initDefaultArticles() {
+            const defaultArticles = [
+                {
+                    id: '1',
+                    category: 'programming',
+                    title: 'Chrome 扩展开发实战：Google Maps 邮编标注工具',
+                    date: '2025-05-09',
+                    desc: '这款 Chrome 扩展程序可在 Google Maps 上批量标注澳大利亚邮编位置，自动解析邮编边界与详情...',
+                    img: 'https://picsum.photos/200/150?random=1',
+                    content: '<p>### 一、开发背景</p><p>在处理澳大利亚地理数据时，需要快速标注邮编区域...</p>'
+                },
+                {
+                    id: '2',
+                    category: 'jewelry',
+                    title: '碧玺选购指南：颜色、净度与产地对价值的影响',
+                    date: '2025-04-10',
+                    desc: '详解碧玺“红、蓝、绿”三大热门色系特点，教你辨别天然碧玺与优化处理品...',
+                    img: 'https://picsum.photos/200/150?random=12',
+                    content: '<p>### 一、碧玺的颜色分类</p><p>1. 红色碧玺：又称“卢比来”，以鲜艳的正红色为贵...</p>'
+                },
+                {
+                    id: '3',
+                    category: 'jewelry',
+                    title: '钻石4C分级指南',
+                    date: '2025-04-15',
+                    desc: '从重量、颜色、净度、切工解析钻石价值，避坑挑选技巧全分享...',
+                    img: 'https://picsum.photos/200/150?random=10',
+                    content: '<p>### 一、钻石重量（Carat）</p><p>1克拉=0.2克，钻石价格与重量呈非线性增长...</p>'
+                },
+                {
+                    id: '4',
+                    category: 'design',
+                    title: 'Figma组件库搭建指南',
+                    date: '2025-03-20',
+                    desc: '从零搭建可复用Figma组件库，包含按钮、输入框等基础组件，提升设计效率...',
+                    img: 'https://picsum.photos/200/150?random=5',
+                    content: '<p>### 一、组件库规划</p><p>1. 确定组件范围：基础组件+业务组件...</p>'
+                },
+                {
+                    id: '5',
+                    category: 'reading',
+                    title: '《原子习惯》读书笔记：如何养成持久的好习惯',
+                    date: '2025-02-18',
+                    desc: '拆解“微小改变，巨大成果”的核心逻辑，分享4个习惯养成步骤...',
+                    img: 'https://picsum.photos/200/150?random=8',
+                    content: '<p>### 核心观点：1%的微小进步</p><p>习惯的复利效应：每天进步1%，一年后提升37倍...</p>'
+                },
+                {
+                    id: '6',
+                    category: 'art',
+                    title: '印象派绘画特点解析：以莫奈《睡莲》为例',
+                    date: '2025-01-30',
+                    desc: '从光影、色彩、笔触三方面分析印象派的艺术特色，解读《睡莲》中的自然表达...',
+                    img: 'https://picsum.photos/200/150?random=3',
+                    content: '<p>### 一、光影的瞬间捕捉</p><p>印象派摒弃传统暗部画法，用色彩直接表现光影变化...</p>'
+                }
+            ];
+            if (!localStorage.getItem(ARTICLE_KEY)) {
+                localStorage.setItem(ARTICLE_KEY, JSON.stringify(defaultArticles));
+            }
+        }
+
+        function getArticles() {
+            initDefaultArticles();
+            return JSON.parse(localStorage.getItem(ARTICLE_KEY) || '[]');
+        }
+
+        function saveArticle(article) {
+            const articles = getArticles();
+            const index = articles.findIndex(a => a.id === article.id);
+            if (index > -1) {
+                articles[index] = article;
+            } else {
+                article.id = Date.now().toString();
+                articles.push(article);
+            }
+            localStorage.setItem(ARTICLE_KEY, JSON.stringify(articles));
+            return article;
+        }
+
+        function getArticlesByCategory(categoryId) {
+            const articles = getArticles();
+            return articles.filter(a => a.category === categoryId);
+        }
+
+        // 8. 带筛选/排序/分页的文章列表渲染
+        function renderArticleListWithFilter() {
+            const { categoryId, tagKeywords, sortType, page, pageSize } = currentFilter;
+            const listContainer = document.getElementById(`${categoryId}List`);
+            if (!listContainer) return;
+
+            // 显示加载状态
+            listContainer.innerHTML = '<div class="loading">加载中...</div>';
+
+            // 筛选逻辑
+            let articles = getArticlesByCategory(categoryId);
+            if (tagKeywords.length > 0) {
+                articles = articles.filter(article => 
+                    tagKeywords.some(keyword => 
+                        article.title.includes(keyword) || article.desc.includes(keyword) || article.content.includes(keyword)
+                    )
+                );
+            }
+
+            // 排序逻辑
+            articles.sort((a, b) => {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                return sortType === 'newest' ? dateB - dateA : dateA - dateB;
+            });
+
+            // 分页逻辑
+            const total = articles.length;
+            currentFilter.totalPages = Math.ceil(total / pageSize);
+            const startIndex = (page - 1) * pageSize;
+            const currentPageArticles = articles.slice(startIndex, startIndex + pageSize);
+
+            // 模拟加载延迟
+            setTimeout(() => {
+                if (total === 0) {
+                    listContainer.innerHTML = `
+                        <div class="empty-state">
+                            <<i>📄</</i>
+                            <p>暂无符合条件的文章</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('createBtn').click()">创建新文章</button>
+                        </div>
+                    `;
+                    renderPagination();
+                    return;
+                }
+
+                if (currentPageArticles.length === 0) {
+                    listContainer.innerHTML = '<div class="empty-state"><p>已加载全部文章</p></div>';
+                    return;
+                }
+
+                listContainer.innerHTML = '';
+                currentPageArticles.forEach(article => {
+                    const articleTags = getArticleTags(article, categoryId);
+                    const articleElement = document.createElement('div');
+                    articleElement.className = 'article';
+                    articleElement.innerHTML = `
+                        <div class="article-info">
+                            <div class="article-tags">
+                                ${articleTags.map(tag => `<span class="article-tag">${tag}</span>`).join('')}
+                            </div>
+                            <h3 class="article-title">${article.title}</h3>
+                            <p class="article-desc">${article.desc}</p>
+                            <div class="article-meta">
+                                <span class="article-date">${article.date}</span>
+                                <span class="article-readtime">⏱️ ${Math.ceil(article.content.length / 500)}分钟阅读</span>
+                            </div>
+                        </div>
+                        <img src="${article.img || 'https://picsum.photos/200/150?random=0'}" alt="${article.title}" class="article-img">
+                    `;
+                    articleElement.addEventListener('click', () => {
+                        showEditPage(article);
+                    });
+                    listContainer.appendChild(articleElement);
+                });
+
+                renderPagination();
+            }, 300);
+        }
+
+        // 提取文章标签
+        function getArticleTags(article, categoryId) {
+            const tags = categoryTagsMap[categoryId] || [];
+            const articleText = `${article.title} ${article.desc} ${article.content}`;
+            return tags
+                .filter(tag => tag.name !== '全部' && tag.keywords.some(key => articleText.includes(key)))
+                .map(tag => tag.name)
+                .slice(0, 2);
+        }
+
+        // 渲染分页组件
+        function renderPagination() {
+            const paginationContainer = document.getElementById('pagination');
+            const { page, totalPages } = currentFilter;
+
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = `
+                <button class="pagination-btn ${page === 1 ? 'disabled' : ''}" onclick="changePage(1)">首页</button>
+                <button class="pagination-btn ${page === 1 ? 'disabled' : ''}" onclick="changePage(${page - 1})">上一页</button>
+            `;
+
+            const startPage = Math.max(1, page - 2);
+            const endPage = Math.min(totalPages, page + 2);
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `<button class="pagination-btn ${page === i ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+            }
+
+            paginationHTML += `
+                <button class="pagination-btn ${page === totalPages ? 'disabled' : ''}" onclick="changePage(${page + 1})">下一页</button>
+                <button class="pagination-btn ${page === totalPages ? 'disabled' : ''}" onclick="changePage(${totalPages})">末页</button>
+            `;
+
+            paginationContainer.innerHTML = paginationHTML;
+        }
+
+        // 切换页码
+        function changePage(targetPage) {
+            const { totalPages } = currentFilter;
+            if (targetPage < 1 || targetPage > totalPages) return;
+            currentFilter.page = targetPage;
+            renderArticleListWithFilter();
+        }
+
+        // 9. 创建文章功能（新增MD上传解析逻辑）
+        const createBtn = document.getElementById('createBtn');
+        const createForm = document.getElementById('createForm');
+        const saveCreateBtn = document.getElementById('saveCreateBtn');
+        const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+        // 新增：MD上传相关DOM
+        const mdFileInput = document.getElementById('mdFileInput');
+        const mdUploadBtn = document.getElementById('mdUploadBtn');
+        const mdFileName = document.getElementById('mdFileName');
+        let mdContent = ''; // 存储解析后的MD内容
+
+        // MD上传按钮触发文件选择
+        mdUploadBtn.addEventListener('click', () => {
+            mdFileInput.click();
+        });
+
+        // 读取MD文件内容并解析
+        mdFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.type !== 'text/markdown' && !file.name.endsWith('.md')) {
+                alert('请选择.md格式的文件');
+                mdFileInput.value = '';
+                mdFileName.textContent = '';
+                return;
+            }
+
+            // 显示文件名
+            mdFileName.textContent = `已选择：${file.name}`;
+
+            // 读取文件内容
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const rawMd = event.target.result;
+                // 解析MD为HTML（用于文章content）
+                mdContent = marked.parse(rawMd);
+                // 提取标题（取第一个#后的内容）
+                const titleMatch = rawMd.match(/^#\s+(.*?)(\n|$)/);
+                if (titleMatch && titleMatch[1]) {
+                    document.getElementById('articleTitle').value = titleMatch[1];
+                }
+                // 提取摘要（取MD内容前100个字符，去除换行）
+                const pureText = rawMd.replace(/\s+/g, ' ').slice(0, 100) + '...';
+                document.getElementById('articleDesc').value = pureText;
+            };
+            reader.readAsText(file);
+        });
+
+        createBtn.addEventListener('click', () => {
+            createForm.classList.add('active');
+            // 重置MD相关状态
+            mdFileInput.value = '';
+            mdFileName.textContent = '';
+            mdContent = '';
+            // 初始化表单默认值
+            document.getElementById('articleTitle').value = '';
+            document.getElementById('articleDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('articleDesc').value = '';
+            document.getElementById('articleImg').value = `https://picsum.photos/200/150?random=${Math.floor(Math.random() * 100)}`;
+            document.getElementById('articleCategory').value = currentFilter.categoryId;
+        });
+
+        function hideCreateForm() {
+            createForm.classList.remove('active');
+        }
+
+        cancelCreateBtn.addEventListener('click', hideCreateForm);
+
+        saveCreateBtn.addEventListener('click', () => {
+            const title = document.getElementById('articleTitle').value.trim();
+            const date = document.getElementById('articleDate').value;
+            const desc = document.getElementById('articleDesc').value.trim();
+            const img = document.getElementById('articleImg').value.trim();
+            const category = document.getElementById('articleCategory').value;
+            // 优先使用MD解析的内容，无则用默认
+            const content = mdContent || '<p>想说点什么...</p>';
+
+            if (!title || !date || !desc) {
+                alert('标题、日期、摘要不能为空！');
+                return;
+            }
+
+            const article = saveArticle({
+                title, date, desc, img, category, content
+            });
+
+            hideCreateForm();
+            currentFilter.page = 1;
+            renderArticleListWithFilter();
+            switchToCategory(category);
+            alert('文章创建成功，可点击文章进入编辑长文内容！');
+        });
+
+        // 10. 编辑文章功能（新增编辑页MD上传）
+        const editPage = document.getElementById('editPage');
+        const backToListBtn = document.getElementById('backToListBtn');
+        const saveEditBtn = document.getElementById('saveEditBtn');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+        const editTitle = document.getElementById('editTitle');
+        const editArticleId = document.getElementById('editArticleId');
+        // 新增：编辑页MD上传控件
+        const editMdFileInput = document.getElementById('editMdFileInput');
+        const editMdUploadBtn = document.querySelector('.edit-toolbar .tool-btn[title="上传MD替换内容"]');
+
+        // 编辑页MD上传触发
+        editMdUploadBtn.addEventListener('click', () => {
+            editMdFileInput.click();
+        });
+
+        // 编辑页读取MD并替换内容
+        editMdFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file || (!file.name.endsWith('.md') && file.type !== 'text/markdown')) {
+                alert('请选择.md格式的文件');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const rawMd = event.target.result;
+                const htmlContent = marked.parse(rawMd);
+                // 替换编辑器内容
+                quill.root.innerHTML = htmlContent;
+                // 同步更新标题
+                const titleMatch = rawMd.match(/^#\s+(.*?)(\n|$)/);
+                if (titleMatch && titleMatch[1]) {
+                    editTitle.value = titleMatch[1];
+                }
+                // 更新下一步按钮状态
+                nextStepBtn.style.opacity = '1';
+                nextStepBtn.style.cursor = 'pointer';
+            };
+            reader.readAsText(file);
+        });
+
+        function showEditPage(article) {
+            editTitle.value = article.title || '';
+            editArticleId.value = article.id || '';
+            quill.root.innerHTML = article.content || '<p>想说点什么...</p>';
+
+            // 隐藏其他页面，显示编辑页
+            pages.forEach(page => page.classList.remove('active'));
+            createForm.classList.remove('active');
+            editPage.classList.add('active');
+
+            // 控制“下一步”按钮状态
+            nextStepBtn.style.opacity = article.content && article.content.trim() !== '<p>想说点什么...</p>' ? '1' : '0.7';
+            nextStepBtn.style.cursor = article.content && article.content.trim() !== '<p>想说点什么...</p>' ? 'pointer' : 'not-allowed';
+        }
+
+        function hideEditPage() {
+            editPage.classList.remove('active');
+            const activeCategoryId = currentFilter.categoryId;
+            document.getElementById(`${activeCategoryId}Page`).classList.add('active');
+        }
+
+        backToListBtn.addEventListener('click', hideEditPage);
+
+        saveEditBtn.addEventListener('click', () => {
+            const id = editArticleId.value;
+            const title = editTitle.value.trim();
+            const content = quill.root.innerHTML;
+
+            if (!id || !title) {
+                alert('标题不能为空！');
+                return;
+            }
+
+            const articles = getArticles();
+            const articleIndex = articles.findIndex(a => a.id === id);
+            if (articleIndex === -1) return;
+
+            articles[articleIndex].title = title;
+            articles[articleIndex].content = content;
+
+            localStorage.setItem(ARTICLE_KEY, JSON.stringify(articles));
+            renderArticleListWithFilter();
+            hideEditPage();
+            alert('文章修改已保存！');
+        });
+
+        // 下一步按钮逻辑（示例）
+        nextStepBtn.addEventListener('click', () => {
+            if (nextStepBtn.style.opacity === '1') {
+                alert('“下一步”可扩展为发布、预览等逻辑');
+            }
+        });
+
+        // 底部工具按钮逻辑（示例：图片插入）
+        document.getElementById('imgToolBtn').addEventListener('click', () => {
+            const imgUrl = prompt('请输入图片URL：', 'https://picsum.photos/400/300?random=' + Math.floor(Math.random() * 100));
+            if (imgUrl) {
+                const range = quill.getSelection();
+                if (range) {
+                    quill.insertEmbed(range.index, 'image', imgUrl);
+                    quill.setSelection(range.index + 1);
+                }
+            }
+        });
+
+        // 辅助函数
+        function getActiveCategoryId() {
+            return currentFilter.categoryId;
+        }
+
+        function switchToCategory(categoryId) {
+            const category = document.querySelector(`.category[data-page="${categoryId}"]`);
+            if (category) category.click();
+        }
+
+        function initArticleRender() {
+            const { categoryId } = currentFilter;
+            renderTags(categoryId);
+            renderArticleListWithFilter();
+        }
+
+        // 页面加载初始化
+        window.addEventListener('load', () => {
+            initDefaultArticles();
+            // 同步富文本编辑器初始样式
+            document.querySelector('.ql-toolbar').style.backgroundColor = getComputedStyle(body).getPropertyValue('--category-bg');
+            document.querySelector('.ql-container').style.backgroundColor = getComputedStyle(body).getPropertyValue('--bg');
         });
     </script>
 </body>
